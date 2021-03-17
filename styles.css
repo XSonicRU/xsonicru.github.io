@@ -2,11 +2,22 @@ body {
     margin: 0;
 }
 
-.card {
+.memecard {
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    transition: 0.5s;
+    transition: 0.3s;
+    width: 320px;
+    margin: 10px;
 }
-
+.memecard:hover {
+    box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.2);
+}
+.memecard p{
+    margin: auto;
+    text-align: center;
+}
+.meme-container{
+    display: flex;
+}
 .ntopic {
     margin: 250px;
 }
@@ -17,15 +28,9 @@ body {
 
 .rcorn {
     border-radius: 25px;
-    background: #d4d4d4;
-    padding: 20px;
     margin: 10px;
     width: 200px;
     height: 150px;
-}
-
-.container {
-    padding: 0 40px;
 }
 
 .menu_bar {
