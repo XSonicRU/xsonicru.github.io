@@ -4,14 +4,20 @@ body {margin:0;}
     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
     transition: 0.5s;
 }
-
+.rcorn {
+    border-radius: 25px;
+    background: #d4d4d4;
+    padding: 20px;
+    margin: 10px;
+    width: 200px;
+    height: 150px;
+}
 .container {
     padding: 0 40px;
 }
 .menu_bar nav {
     display: block;
-    width: 660px;
-    margin: 0 auto 30px;
+    width: 320px;
 }
 .menu_bar ul {
     background: #D4E7EE;
