@@ -1,7 +1,33 @@
+@import url(https://fonts.googleapis.com/css?family=Lora);
+body {margin:0;}
 .card {
     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
     transition: 0.5s;
 }
+
 .container {
     padding: 0 40px;
 }
+.menu_bar nav {
+    display: block;
+    width: 660px;
+    margin: 0 auto 30px;
+}
+.menu_bar ul {
+    background: #D4E7EE;
+    overflow: hidden;
+    padding: 0;
+    list-style: none;
+    margin: 0 auto;
+}
+.menu_bar li {
+    float: left;
+}
+.menu_bar a {
+    display: block;
+    padding: 1em;
+    border-right: 1px solid #ADC0CE;
+    background: rgba(173, 192, 206, .3);
+    color: #29838C;
+}
+.menu_bar a:hover {background: #ADC0CE}
