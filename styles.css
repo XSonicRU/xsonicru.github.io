@@ -4,6 +4,12 @@ body {margin:0;}
     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
     transition: 0.5s;
 }
+.ntopic{
+    margin: 250px;
+}
+.mtext{
+    margin: 10px;
+}
 .rcorn {
     border-radius: 25px;
     background: #d4d4d4;
@@ -15,9 +21,9 @@ body {margin:0;}
 .container {
     padding: 0 40px;
 }
-.menu_bar nav {
+.menu_bar{
     display: block;
-    width: 320px;
+    width: 325px;
 }
 .menu_bar ul {
     background: #D4E7EE;
