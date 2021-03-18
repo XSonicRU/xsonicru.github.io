@@ -1,41 +1,69 @@
 body {
     margin: 0;
 }
+
 table, th, td {
     border: 2px solid #838383;
     border-collapse: collapse;
 }
+
+.myimg {
+    transition: 0.5s;
+    width: 150px;
+    height: 150px;
+}
+
+.myimg:hover {
+    width: 300px;
+    height: 300px;
+}
+
+.list {
+    display: inline-block;
+    border: 1px solid black;
+    padding: 20px;
+    transition: 0.5s;
+}
+
 .memecard {
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
     transition: 0.3s;
-    width: 320px;
+    width: auto;
     margin: 10px;
 }
+
 .memecard:hover {
     box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.2);
 }
-.memecard p{
+.memeimg{
+    width:300px;
+    height:300px;
+    transition: 0.5s;
+}
+.memeimg:hover{
+    width:400px;
+    height:400px;
+}
+.memecard p {
     margin: auto;
     text-align: center;
 }
-.meme-container{
-    display: flex;
-}
+
 .ntopic {
     margin: 250px;
 }
 
-.mtext{
+.mtext {
     margin: 10px;
 }
-.mtext a{
+
+.mtext a {
     padding: 15px;
 }
+
 .rcorn {
     border-radius: 25px;
     margin: 10px;
-    width: 200px;
-    height: 150px;
 }
 
 .menu_bar {
