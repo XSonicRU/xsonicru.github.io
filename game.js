@@ -4,9 +4,9 @@ const context = canvas.getContext("2d");
 const canvasW = canvas.getBoundingClientRect().width
 const canvasH = canvas.getBoundingClientRect().height
 
-var control = false;
+var control = false; //false - kb/mouse, true - touch
 
-var state = 0; //0 - main, 1 - game, 2 - results
+var state = -1; // -1 - pre-init, 0 - main, 1 - game, 2 - results
 
 var score = 0;
 var highscore = 0;
@@ -14,34 +14,102 @@ var highscore = 0;
 class Drawable {
     constructor(x, y, w, h, spr) { //x is either an x or a manual draw func
         if (typeof (x) == "number") {
-            this.manual = false;
             this.spr = spr;
             this.rect = {x: x, y: y, w: w, h: h}
         } else {
-            this.manual = true;
-            this.func = x;
+            this.draw = x;
         }
     }
 
     draw() {
-        if (this.manual === true) {
-            this.func();
-        } else {
-            context.drawImage(this.spr, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-        }
+        context.drawImage(this.spr, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
     }
 }
 
 function update() {
     context.clearRect(0, 0, canvas.width, canvas.height);
     drawables.forEach(d => d.draw());
+    drawables.forEach(d => typeof (d.update) == "function" ? d.update() : null);
+}
+
+class Bullet extends Drawable {
+
 }
 
 class Player extends Drawable {
     health = 100;
+    invincible = false;
+    speed = 3;
+    movestates = {left: false, up: false, right: false, down: false, shoot: false};
 
-    constructor(x, y, w, h) {
-        super(0, 0, 0, 0, null);
+
+    constructor() {
+        super(null) //idiotic
+        this.sprite = new Image();
+        this.sprite.src = "game/spaceship.png";
+        this.rect = {x: canvasW / 5, y: canvasH / 2, w: canvasW / 10, h: canvasH / 15};
+        if (!control) {
+            const keyEvent = (event) => {
+                switch (event.key) {
+                    case "ArrowLeft":
+                        this.movestates.left = event.type === "keydown";
+                        break;
+                    case "ArrowUp":
+                        this.movestates.up = event.type === "keydown";
+                        break;
+                    case "ArrowRight":
+                        this.movestates.right = event.type === "keydown";
+                        break;
+                    case "ArrowDown":
+                        this.movestates.down = event.type === "keydown";
+                        break;
+                    case "Control":
+                        this.movestates.shoot = event.type === "keydown";
+                        break;
+                }
+            };
+
+            this.draw = () => {
+                if (!this.invincible) {
+                    context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                } else {
+
+                }
+            }
+
+            document.addEventListener('keydown', keyEvent);
+            document.addEventListener('keyup', keyEvent);
+        } else {
+            this.movestates.shoot = true;
+        }
+    }
+
+    update() {
+        if (!control) {
+            if (this.movestates.left) {
+                this.rect.x -= this.speed;
+            }
+            if (this.movestates.up) {
+                this.rect.y -= this.speed;
+            }
+            if (this.movestates.right) {
+                this.rect.x += this.speed;
+            }
+            if (this.movestates.down) {
+                this.rect.y += this.speed;
+            }
+        } else {
+
+        }
+        if (this.rect.x < 0) {
+            this.rect.x = 0;
+        } else if (this.rect.x > (canvasW - this.rect.w)) {
+            this.rect.x = (canvasW - this.rect.w);
+        } else if (this.rect.y < 0) {
+            this.rect.y = 0;
+        } else if (this.rect.y > (canvasH - this.rect.h)) {
+            this.rect.y = (canvasH - this.rect.h);
+        }
     }
 }
 
@@ -55,7 +123,7 @@ function drawScore() {
     context.font = "16px Arial";
     context.fillStyle = "#FFFFFF";
     if (state === 1) {
-        context.fillText("Highscore:" + highscore + "\t\t\t\t\t\t\t\t\tScore:" + score, canvasW * (1 / 2), 20, canvasW / 3);
+        context.fillText("Highscore:" + highscore + "            " + "Score:" + score, canvasW * (1 / 2), 20, canvasW / 3);
     } else {
         context.fillText("Highscore:" + highscore, canvasW * (2 / 3), 22, canvasW / 3);
     }
@@ -64,7 +132,6 @@ function drawScore() {
 class Button extends Drawable {
     constructor(text, x, y, w, h, onClick) {
         super(function () {
-
             context.font = "16px Arial";
             context.strokeStyle = "#FFFFFF";
             context.strokeRect(x * this.multipliers.x, y, w, h);
@@ -84,29 +151,36 @@ class Button extends Drawable {
 }
 
 function proceed() {
-    if (state === 0) {
-        state = 1;
-        drawables.length = 0;
-        drawables.push(new Drawable(function () {
-            //context.rect(10, 10, player.health, 10);
-            context.rect(10, 10, 100, 10);
-            context.fillStyle = "#FF0000";
-            context.fill();
-        }))
-        drawables.push(drawables.push(new Drawable(drawScore)))
-    } else if (state === 2) {
-        state = 0;
+    switch (state) {
+        case -1:
+            drawables.push(new Drawable(drawScore));
+            drawables.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
+                control = false;
+                proceed();
+            }));
+            drawables.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
+                control = true;
+                proceed();
+            }));
+            state = 0;
+            break;
+        case 0:
+            drawables.length = 0;
+            const player = new Player();
+            drawables.push(player);
+            state = 1;
+            drawables.push(new Drawable(function () {
+                context.rect(10, 10, player.health, 10);
+                //context.rect(10, 10, 100, 10);
+                context.fillStyle = "#FF0000";
+                context.fill();
+            }))
+            drawables.push(new Drawable(drawScore))
+            break;
+        case 2:
+            break;
     }
 }
 
-drawables.push(new Drawable(drawScore));
-drawables.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
-    control = false;
-    proceed();
-}));
-drawables.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
-    control = true;
-    proceed();
-}));
-
-setInterval(update, 10);
+proceed();
+setInterval(update, 16);
