@@ -1,6 +1,7 @@
 body {
     margin: 0;
 }
+canvas { background: #000000; display: block; margin: 50px auto; }
 
 table, th, td {
     border: 2px solid #838383;
@@ -69,7 +70,7 @@ table, th, td {
 .menu_bar {
     font-family: "Inter";
     display: block;
-    width: 350px;
+    width: 500px;
 }
 
 .menu_bar ul {
