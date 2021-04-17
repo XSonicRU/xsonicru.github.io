@@ -11,6 +11,45 @@ var state = -1; // -1 - pre-init, 0 - main, 1 - game, 2 - results
 var score = 0;
 var highScore = 0;
 
+var objects = []
+
+function proceed() {
+    switch (state) {
+        case -1:
+            objects.push(new Drawable(drawScore));
+            objects.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
+                isTouchControl = false;
+                proceed();
+            }));
+            objects.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
+                isTouchControl = true;
+                proceed();
+            }));
+            state = 0;
+            break;
+        case 0:
+            objects.length = 0;
+            const player = new Player();
+            objects.push(player);
+            state = 1;
+            objects.push(new Drawable(function () {
+                context.rect(10, 10, player.health, 10);
+                context.fillStyle = "#FF0000";
+                context.fill();
+            }))
+            objects.push(new Drawable(drawScore))
+            break;
+        case 2:
+            break;
+    }
+}
+
+function update() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    objects.forEach(d => d.draw());
+    objects.forEach(d => typeof (d.update) == "function" ? d.update() : null);
+}
+
 class Drawable {
     constructor(x, y, w, h, spr) { //x is either an x or a manual draw func
         if (typeof (x) == "number") {
@@ -25,12 +64,6 @@ class Drawable {
     draw() {
         context.drawImage(this.spr, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
     }
-}
-
-function update() {
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    objects.forEach(d => d.draw());
-    objects.forEach(d => typeof (d.update) == "function" ? d.update() : null);
 }
 
 class Bullet extends Drawable {
@@ -134,8 +167,6 @@ class Player extends Drawable {
     }
 }
 
-var objects = []
-
 /*if( /Android|webOS|iPhone|iPad|Mac|Macintosh|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
     // some code..
 }*/
@@ -168,37 +199,6 @@ class Button extends Drawable {
                 onClick();
             }
         }, false);
-    }
-}
-
-function proceed() {
-    switch (state) {
-        case -1:
-            objects.push(new Drawable(drawScore));
-            objects.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
-                isTouchControl = false;
-                proceed();
-            }));
-            objects.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
-                isTouchControl = true;
-                proceed();
-            }));
-            state = 0;
-            break;
-        case 0:
-            objects.length = 0;
-            const player = new Player();
-            objects.push(player);
-            state = 1;
-            objects.push(new Drawable(function () {
-                context.rect(10, 10, player.health, 10);
-                context.fillStyle = "#FF0000";
-                context.fill();
-            }))
-            objects.push(new Drawable(drawScore))
-            break;
-        case 2:
-            break;
     }
 }
 
