@@ -4,12 +4,12 @@ const context = canvas.getContext("2d");
 const canvasW = canvas.getBoundingClientRect().width
 const canvasH = canvas.getBoundingClientRect().height
 
-var control = false; //false - kb/mouse, true - touch
+var isTouchControl = false; //false - kb/mouse, true - touch
 
 var state = -1; // -1 - pre-init, 0 - main, 1 - game, 2 - results
 
 var score = 0;
-var highscore = 0;
+var highScore = 0;
 
 class Drawable {
     constructor(x, y, w, h, spr) { //x is either an x or a manual draw func
@@ -35,7 +35,6 @@ function update() {
 
 class Bullet extends Drawable {
 
-
     constructor(x, y, type, speed) { //type=true - good bullet, false - bad bullet
         super(x, y, canvasW / 20, canvasH / 40, "game/bullet.png");
         this.type = type;
@@ -53,7 +52,7 @@ class Player extends Drawable {
     speed = 5;
     onCooldown = false;
     cooldown = 300;
-    movestates = {left: false, up: false, right: false, down: false, shoot: false};
+    move_states = {left: false, up: false, right: false, down: false, shoot: false};
 
 
     constructor() {
@@ -61,23 +60,23 @@ class Player extends Drawable {
         this.sprite = new Image();
         this.sprite.src = "game/spaceship.png";
         this.rect = {x: canvasW / 5, y: canvasH / 2, w: canvasW / 10, h: canvasH / 15};
-        if (!control) {
+        if (!isTouchControl) {
             const keyEvent = (event) => {
                 switch (event.key) {
                     case "ArrowLeft":
-                        this.movestates.left = event.type === "keydown";
+                        this.move_states.left = event.type === "keydown";
                         break;
                     case "ArrowUp":
-                        this.movestates.up = event.type === "keydown";
+                        this.move_states.up = event.type === "keydown";
                         break;
                     case "ArrowRight":
-                        this.movestates.right = event.type === "keydown";
+                        this.move_states.right = event.type === "keydown";
                         break;
                     case "ArrowDown":
-                        this.movestates.down = event.type === "keydown";
+                        this.move_states.down = event.type === "keydown";
                         break;
                     case "Control":
-                        this.movestates.shoot = event.type === "keydown";
+                        this.move_states.shoot = event.type === "keydown";
                         break;
                 }
             };
@@ -93,27 +92,27 @@ class Player extends Drawable {
             document.addEventListener('keydown', keyEvent);
             document.addEventListener('keyup', keyEvent);
         } else {
-            this.movestates.shoot = true;
+            this.move_states.shoot = true;
         }
     }
 
     update() {
-        if (!control) {
-            if (this.movestates.left) {
+        if (!isTouchControl) {
+            if (this.move_states.left) {
                 this.rect.x -= this.speed;
             }
-            if (this.movestates.up) {
+            if (this.move_states.up) {
                 this.rect.y -= this.speed;
             }
-            if (this.movestates.right) {
+            if (this.move_states.right) {
                 this.rect.x += this.speed;
             }
-            if (this.movestates.down) {
+            if (this.move_states.down) {
                 this.rect.y += this.speed;
             }
-            if (this.movestates.shoot) {
+            if (this.move_states.shoot) {
                 if (!this.onCooldown) {
-                    objects.push(new Bullet(this.rect.x, this.rect.y, true, 10));
+                    objects.push(new Bullet(this.rect.x, this.rect.y + this.rect.h / 2 - canvasH / 80, true, 10));
                     this.onCooldown = true;
                     setTimeout(() => {
                         this.onCooldown = false;
@@ -145,9 +144,9 @@ function drawScore() {
     context.font = "16px Arial";
     context.fillStyle = "#FFFFFF";
     if (state === 1) {
-        context.fillText("Highscore:" + highscore + "            " + "Score:" + score, canvasW * (1 / 2), 20, canvasW / 3);
+        context.fillText("Highscore:" + highScore + "            " + "Score:" + score, canvasW * (1 / 2), 20, canvasW / 3);
     } else {
-        context.fillText("Highscore:" + highscore, canvasW * (2 / 3), 22, canvasW / 3);
+        context.fillText("Highscore:" + highScore, canvasW * (2 / 3), 22, canvasW / 3);
     }
 }
 
@@ -177,11 +176,11 @@ function proceed() {
         case -1:
             objects.push(new Drawable(drawScore));
             objects.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
-                control = false;
+                isTouchControl = false;
                 proceed();
             }));
             objects.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
-                control = true;
+                isTouchControl = true;
                 proceed();
             }));
             state = 0;
