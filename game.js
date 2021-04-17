@@ -14,7 +14,8 @@ var highscore = 0;
 class Drawable {
     constructor(x, y, w, h, spr) { //x is either an x or a manual draw func
         if (typeof (x) == "number") {
-            this.spr = spr;
+            this.spr = new Image();
+            this.spr.src = spr;
             this.rect = {x: x, y: y, w: w, h: h}
         } else {
             this.draw = x;
@@ -28,18 +29,30 @@ class Drawable {
 
 function update() {
     context.clearRect(0, 0, canvas.width, canvas.height);
-    drawables.forEach(d => d.draw());
-    drawables.forEach(d => typeof (d.update) == "function" ? d.update() : null);
+    objects.forEach(d => d.draw());
+    objects.forEach(d => typeof (d.update) == "function" ? d.update() : null);
 }
 
 class Bullet extends Drawable {
 
+
+    constructor(x, y, type, speed) { //type=true - good bullet, false - bad bullet
+        super(x, y, canvasW / 20, canvasH / 40, "game/bullet.png");
+        this.type = type;
+        this.speed = speed;
+    }
+
+    update() {
+        this.rect.x = this.type ? this.rect.x + this.speed : this.rect.x - this.speed;
+    }
 }
 
 class Player extends Drawable {
     health = 100;
     invincible = false;
-    speed = 3;
+    speed = 5;
+    onCooldown = false;
+    cooldown = 300;
     movestates = {left: false, up: false, right: false, down: false, shoot: false};
 
 
@@ -98,6 +111,15 @@ class Player extends Drawable {
             if (this.movestates.down) {
                 this.rect.y += this.speed;
             }
+            if (this.movestates.shoot) {
+                if (!this.onCooldown) {
+                    objects.push(new Bullet(this.rect.x, this.rect.y, true, 10));
+                    this.onCooldown = true;
+                    setTimeout(() => {
+                        this.onCooldown = false;
+                    }, this.cooldown)
+                }
+            }
         } else {
 
         }
@@ -113,7 +135,7 @@ class Player extends Drawable {
     }
 }
 
-var drawables = []
+var objects = []
 
 /*if( /Android|webOS|iPhone|iPad|Mac|Macintosh|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
     // some code..
@@ -153,29 +175,28 @@ class Button extends Drawable {
 function proceed() {
     switch (state) {
         case -1:
-            drawables.push(new Drawable(drawScore));
-            drawables.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
+            objects.push(new Drawable(drawScore));
+            objects.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
                 control = false;
                 proceed();
             }));
-            drawables.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
+            objects.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
                 control = true;
                 proceed();
             }));
             state = 0;
             break;
         case 0:
-            drawables.length = 0;
+            objects.length = 0;
             const player = new Player();
-            drawables.push(player);
+            objects.push(player);
             state = 1;
-            drawables.push(new Drawable(function () {
+            objects.push(new Drawable(function () {
                 context.rect(10, 10, player.health, 10);
-                //context.rect(10, 10, 100, 10);
                 context.fillStyle = "#FF0000";
                 context.fill();
             }))
-            drawables.push(new Drawable(drawScore))
+            objects.push(new Drawable(drawScore))
             break;
         case 2:
             break;
