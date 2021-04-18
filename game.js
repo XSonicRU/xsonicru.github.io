@@ -13,8 +13,9 @@ var highScore = 0;
 var isTouchControl = false;
 
 var objects = new Map();
-var evman;
 var curID = 0;
+var evman;
+var player;
 
 function proceed() { // init func for buttons and game start/finish
     objects.clear();
@@ -34,16 +35,18 @@ function proceed() { // init func for buttons and game start/finish
         case 0:
             state = 1;
             evman = new event_manager();
-            const player = new Player();
+            player = new Player();
             new GameObject(function () {
+                context.beginPath();
                 context.rect(10, 10, player.health, 10);
                 context.fillStyle = "#FF0000";
                 context.fill();
+                context.closePath();
             });
             new GameObject(drawScore);
             break;
         case 1:
-            clearInterval(evman_timer);
+            state = 2;
             break;
     }
 }
@@ -69,15 +72,19 @@ class event_manager { // manages random events
                 this.obstacleTimer = true;
                 setTimeout(() => {
                     this.obstacleTimer = false;
-                    new Obstacle(canvasW, random_range(canvasW * 0.1, canvasW * 0.9));
+                    if (state === 1) {
+                        new Obstacle(canvasW, random_range(canvasW * 0.1, canvasW * 0.9));
+                    }
                     this.check();
-                }, random_range(500, 1000));
+                }, random_range(300, 900));
             }
         }
     }
 }
 
 class GameObject { // general class for all drawable objects
+    destroyed = false;
+
     constructor(x, y, w, h, spr) { //x is either an x or a manual draw func
         this.id = curID;
         curID++;
@@ -96,6 +103,7 @@ class GameObject { // general class for all drawable objects
     }
 
     destroy() {
+        this.destroyed = true;
         objects.delete(this.id);
     }
 }
@@ -116,7 +124,7 @@ class Bullet extends GameObject {
 }
 
 class Obstacle extends GameObject {
-    speed = 5;
+    speed = 8;
 
     constructor(x, y) {
         super(x, y, 40, 20, "game/meteor.png");
@@ -126,6 +134,15 @@ class Obstacle extends GameObject {
         this.rect.x -= this.speed;
         if (outOfBounds(this.rect))
             this.destroy()
+        if (!this.destroyed) {
+            if (player.checkCollision(this.rect)) {
+                player.health -= 20;
+                if (player.health === 0) {
+                    proceed();
+                }
+                this.destroy();
+            }
+        }
     }
 }
 
@@ -177,6 +194,10 @@ class Player extends GameObject {
         } else {
             this.move_states.shoot = true;
         }
+    }
+
+    checkCollision(rect) {
+        return (rect.x - this.rect.x < this.rect.w && rect.x > this.rect.x) && ((rect.y - this.rect.y) < this.rect.h && rect.y > this.rect.y);
     }
 
     update() {
