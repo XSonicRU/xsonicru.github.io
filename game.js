@@ -4,54 +4,84 @@ const context = canvas.getContext("2d");
 const canvasW = canvas.getBoundingClientRect().width
 const canvasH = canvas.getBoundingClientRect().height
 
-var isTouchControl = false; //false - kb/mouse, true - touch
 
-var state = -1; // -1 - pre-init, 0 - main, 1 - game, 2 - results
+var state = -1; // -1 - main, 1 - game, 2 - results
 
 var score = 0;
 var highScore = 0;
 
-var objects = []
+var isTouchControl = false;
 
-function proceed() {
+var objects = new Map();
+var evman;
+var curID = 0;
+
+function proceed() { // init func for buttons and game start/finish
+    objects.clear();
     switch (state) {
         case -1:
-            objects.push(new Drawable(drawScore));
-            objects.push(new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
+            state = 0;
+            new GameObject(drawScore);
+            new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
                 isTouchControl = false;
                 proceed();
-            }));
-            objects.push(new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
+            });
+            new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
                 isTouchControl = true;
                 proceed();
-            }));
-            state = 0;
+            });
             break;
         case 0:
-            objects.length = 0;
-            const player = new Player();
-            objects.push(player);
             state = 1;
-            objects.push(new Drawable(function () {
+            evman = new event_manager();
+            const player = new Player();
+            new GameObject(function () {
                 context.rect(10, 10, player.health, 10);
                 context.fillStyle = "#FF0000";
                 context.fill();
-            }))
-            objects.push(new Drawable(drawScore))
+            });
+            new GameObject(drawScore);
             break;
-        case 2:
+        case 1:
+            clearInterval(evman_timer);
             break;
     }
 }
 
-function update() {
+function update() { // does the drawing
     context.clearRect(0, 0, canvas.width, canvas.height);
     objects.forEach(d => d.draw());
     objects.forEach(d => typeof (d.update) == "function" ? d.update() : null);
 }
 
-class Drawable {
+class event_manager { // manages random events
+    bossTimer = false;
+    enemyTimer = false;
+
+    constructor() {
+        this.obstacleTimer = false;
+        this.check();
+    }
+
+    check() {
+        if (state === 1) {
+            if (!this.obstacleTimer) {
+                this.obstacleTimer = true;
+                setTimeout(() => {
+                    this.obstacleTimer = false;
+                    new Obstacle(canvasW, random_range(canvasW * 0.1, canvasW * 0.9));
+                    this.check();
+                }, random_range(500, 1000));
+            }
+        }
+    }
+}
+
+class GameObject { // general class for all drawable objects
     constructor(x, y, w, h, spr) { //x is either an x or a manual draw func
+        this.id = curID;
+        curID++;
+        objects.set(this.id, this);
         if (typeof (x) == "number") {
             this.spr = new Image();
             this.spr.src = spr;
@@ -64,9 +94,13 @@ class Drawable {
     draw() {
         context.drawImage(this.spr, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
     }
+
+    destroy() {
+        objects.delete(this.id);
+    }
 }
 
-class Bullet extends Drawable {
+class Bullet extends GameObject {
 
     constructor(x, y, type, speed) { //type=true - good bullet, false - bad bullet
         super(x, y, canvasW / 20, canvasH / 40, "game/bullet.png");
@@ -75,11 +109,27 @@ class Bullet extends Drawable {
     }
 
     update() {
+        if (outOfBounds(this.rect))
+            this.destroy();
         this.rect.x = this.type ? this.rect.x + this.speed : this.rect.x - this.speed;
     }
 }
 
-class Player extends Drawable {
+class Obstacle extends GameObject {
+    speed = 5;
+
+    constructor(x, y) {
+        super(x, y, 40, 20, "game/meteor.png");
+    }
+
+    update() {
+        this.rect.x -= this.speed;
+        if (outOfBounds(this.rect))
+            this.destroy()
+    }
+}
+
+class Player extends GameObject {
     health = 100;
     invincible = false;
     speed = 5;
@@ -145,7 +195,7 @@ class Player extends Drawable {
             }
             if (this.move_states.shoot) {
                 if (!this.onCooldown) {
-                    objects.push(new Bullet(this.rect.x, this.rect.y + this.rect.h / 2 - canvasH / 80, true, 10));
+                    new Bullet(this.rect.x + this.rect.w / 2, this.rect.y + this.rect.h / 2 - canvasH / 80, true, 10);
                     this.onCooldown = true;
                     setTimeout(() => {
                         this.onCooldown = false;
@@ -181,7 +231,7 @@ function drawScore() {
     }
 }
 
-class Button extends Drawable {
+class Button extends GameObject {
     constructor(text, x, y, w, h, onClick) {
         super(function () {
             context.font = "16px Arial";
@@ -202,5 +252,13 @@ class Button extends Drawable {
     }
 }
 
+function random_range(low, high) {
+    return low + Math.random() * (high - low);
+}
+
+function outOfBounds(rect) {
+    return rect.x > canvasW || rect.x < -rect.w;
+}
+
 proceed();
-setInterval(update, 16);
+setInterval(update, 16); //updating at 60fps
