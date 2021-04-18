@@ -24,12 +24,16 @@ function proceed() { // init func for buttons and game start/finish
             state = 0;
             new GameObject(drawScore);
             new Button("Movement Control", canvasW * (1 / 4), canvasH * (2 / 5), 300, 50, function () {
-                isTouchControl = false;
-                proceed();
+                if (state === 0) {
+                    isTouchControl = false;
+                    proceed();
+                }
             });
             new Button("Touch Control", canvasW * (1 / 4), canvasH * (2 / 3), 300, 50, function () {
-                isTouchControl = true;
-                proceed();
+                if (state === 0) {
+                    isTouchControl = true;
+                    proceed();
+                }
             });
             break;
         case 0:
@@ -160,6 +164,13 @@ class Player extends GameObject {
         this.sprite = new Image();
         this.sprite.src = "game/spaceship.png";
         this.rect = {x: canvasW / 5, y: canvasH / 2, w: canvasW / 10, h: canvasH / 15};
+        this.draw = () => {
+            if (!this.invincible) {
+                context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+            } else {
+
+            }
+        }
         if (!isTouchControl) {
             const keyEvent = (event) => {
                 switch (event.key) {
@@ -181,17 +192,20 @@ class Player extends GameObject {
                 }
             };
 
-            this.draw = () => {
-                if (!this.invincible) {
-                    context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
-                } else {
-
-                }
-            }
-
             document.addEventListener('keydown', keyEvent);
             document.addEventListener('keyup', keyEvent);
         } else {
+            canvas.addEventListener('click', (evt) => {
+                this.x1 = this.rect.x;
+                this.y1 = this.rect.y;
+                this.x2 = evt.offsetX;
+                this.y2 = evt.offsetY;
+                var dx = this.x2 - this.x1;
+                var dy = this.y2 - this.y1;
+                this.dist = Math.abs(Math.sqrt(dx * dx + dy * dy));
+                this.s_speed = this.speed / this.dist;
+                this.m_prog = 0;
+            }, false);
             this.move_states.shoot = true;
         }
     }
@@ -201,6 +215,15 @@ class Player extends GameObject {
     }
 
     update() {
+        if (this.move_states.shoot) {
+            if (!this.onCooldown) {
+                new Bullet(this.rect.x + this.rect.w / 2, this.rect.y + this.rect.h / 2 - canvasH / 80, true, 10);
+                this.onCooldown = true;
+                setTimeout(() => {
+                    this.onCooldown = false;
+                }, this.cooldown)
+            }
+        }
         if (!isTouchControl) {
             if (this.move_states.left) {
                 this.rect.x -= this.speed;
@@ -214,17 +237,12 @@ class Player extends GameObject {
             if (this.move_states.down) {
                 this.rect.y += this.speed;
             }
-            if (this.move_states.shoot) {
-                if (!this.onCooldown) {
-                    new Bullet(this.rect.x + this.rect.w / 2, this.rect.y + this.rect.h / 2 - canvasH / 80, true, 10);
-                    this.onCooldown = true;
-                    setTimeout(() => {
-                        this.onCooldown = false;
-                    }, this.cooldown)
-                }
-            }
         } else {
-
+            if (Math.abs(this.x2 - this.rect.x) > this.speed || Math.abs(this.y2 - this.rect.y) > this.speed) {
+                this.m_prog += this.s_speed;
+                this.rect.x = this.x1 + (this.x2 - this.x1) * this.m_prog;
+                this.rect.y = this.y1 + (this.y2 - this.y1) * this.m_prog;
+            }
         }
         if (this.rect.x < 0) {
             this.rect.x = 0;
@@ -264,7 +282,6 @@ class Button extends GameObject {
         const path = new Path2D();
         path.rect(x, y, w, h);
         path.closePath();
-
         canvas.addEventListener('click', function (evt) {
             if (context.isPointInPath(path, evt.offsetX, evt.offsetY)) {
                 onClick();
