@@ -13,8 +13,11 @@ var highScore = 0;
 var isTouchControl = false;
 
 var objects = new Map();
+var enemies = new Map();
+var boss_instance = null;
 var curID = 0;
 var evman;
+var timerHandle;
 var player;
 
 function proceed() { // init func for buttons and game start/finish
@@ -40,17 +43,31 @@ function proceed() { // init func for buttons and game start/finish
             state = 1;
             evman = new event_manager();
             player = new Player();
-            new GameObject(function () {
-                context.beginPath();
-                context.rect(10, 10, player.health, 10);
-                context.fillStyle = "#FF0000";
-                context.fill();
-                context.closePath();
-            });
+            timerHandle = setInterval(() => {
+                score++;
+            }, 500);
+            new GameObject(healthBar);
             new GameObject(drawScore);
             break;
         case 1:
             state = 2;
+            new Button("Retry", canvasW * 0.5, canvasH * (2 / 3), 300, 50, function () {
+                if (state === 2) {
+                    proceed();
+                }
+            });
+            new GameObject(drawScore);
+            clearInterval(timerHandle);
+            if (score > highScore) {
+                highScore = score;
+            }
+            enemies.clear();
+            boss_instance = null;
+            break;
+        case 2:
+            state = -1;
+            score = 0;
+            proceed();
             break;
     }
 }
@@ -64,6 +81,7 @@ function update() { // does the drawing
 class event_manager { // manages random events
     bossTimer = false;
     enemyTimer = false;
+    bossTurn = false;
 
     constructor() {
         this.obstacleTimer = false;
@@ -72,28 +90,39 @@ class event_manager { // manages random events
 
     check() {
         if (state === 1) {
-            if (!this.obstacleTimer) {
-                this.obstacleTimer = true;
-                setTimeout(() => {
-                    this.obstacleTimer = false;
-                    if (state === 1) {
-                        new Obstacle(canvasW, random_range(canvasH * 0.1, canvasH * 0.9));
-                    }
-                    this.check();
-                }, random_range(300, 900));
-            }
-            if (!this.enemyTimer) {
-                this.enemyTimer = true;
-                setTimeout(() => {
-                    this.enemyTimer = false;
-                    if (state === 1) {
-                        var cnt = random_range(1, 5);
-                        for (let i = 0; i < cnt; i++) {
-                            new Enemy(canvasW, random_range(canvasH * 0.1, canvasH * 0.9));
+            if (!this.bossTurn) {
+                if (!this.obstacleTimer) {
+                    this.obstacleTimer = true;
+                    setTimeout(() => {
+                        this.obstacleTimer = false;
+                        if (state === 1) {
+                            new Obstacle(canvasW, random_range(canvasH * 0.1, canvasH * 0.9));
                         }
+                        this.check();
+                    }, random_range(300, 900));
+                }
+                if (!this.enemyTimer) {
+                    this.enemyTimer = true;
+                    setTimeout(() => {
+                        this.enemyTimer = false;
+                        if (state === 1) {
+                            var cnt = random_range(1, 5);
+                            for (let i = 0; i < cnt; i++) {
+                                new Enemy(canvasW, random_range(canvasH * 0.1, canvasH * 0.9));
+                            }
+                        }
+                        this.check();
+                    }, random_range(2000, 7000));
+                }
+            }
+            if (!this.bossTimer) {
+                this.bossTimer = true;
+                setTimeout(() => {
+                    if (state === 1) {
+                        new Boss();
                     }
                     this.check();
-                }, random_range(2000, 7000));
+                }, random_range(5000, 20000)); //5000-20000
             }
         }
     }
@@ -119,6 +148,10 @@ class GameObject { // general class for all drawable objects
         context.drawImage(this.spr, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
     }
 
+    checkCollision(rect) {
+        return (rect.x - this.rect.x < this.rect.w && rect.x > this.rect.x) && ((rect.y - this.rect.y) < this.rect.h && rect.y > this.rect.y);
+    }
+
     destroy() {
         this.destroyed = true;
         objects.delete(this.id);
@@ -136,11 +169,19 @@ class Bullet extends GameObject {
     update() {
         if (!this.type) {
             if (player.checkCollision(this.rect)) {
-                player.health -= 40;
+                player.takeHit(20);
                 if (player.health <= 0) {
                     proceed();
                 }
+                this.destroy();
             }
+        } else {
+            enemies.forEach(e => {
+                if (e.checkCollision(this.rect)) {
+                    e.takeHit();
+                    this.destroy();
+                }
+            });
         }
         if (outOfBounds(this.rect))
             this.destroy();
@@ -161,7 +202,7 @@ class Obstacle extends GameObject {
             this.destroy()
         if (!this.destroyed) {
             if (player.checkCollision(this.rect)) {
-                player.takeHit(20);
+                player.takeHit(10);
                 this.destroy();
             }
         }
@@ -173,7 +214,7 @@ class Player extends GameObject {
     invincible = false;
     speed = 5;
     onCooldown = false;
-    cooldown = 300;
+    cooldown = 200;
     move_states = {left: false, up: false, right: false, down: false, shoot: false};
 
 
@@ -240,9 +281,9 @@ class Player extends GameObject {
             proceed();
         }
         this.invincible = true;
-        setTimeout(()=>{
+        setTimeout(() => {
             this.invincible = false;
-        },2000);
+        }, 2000);
     }
 
     update() {
@@ -297,9 +338,10 @@ class Enemy extends GameObject {
     cooldown = 1000;
     l_state = 0; // 0 - moving to the spot, 1 - firing, 2 - falling back
 
-    constructor(x, y) {
-        super(x, y, 70, 120, 'game/enemy.png');
+    constructor(x, y, w, h) {
+        super(x, y, typeof (w) == 'number' ? w : 70, typeof (h) == 'number' ? h : 120, 'game/enemy.png');
         this.count = 0;
+        enemies.set(this.id, this);
     }
 
     update() {
@@ -310,18 +352,7 @@ class Enemy extends GameObject {
                     this.l_state = 1;
                 break;
             case 1:
-                if (!this.onCooldown) {
-                    new Bullet(this.rect.x + this.rect.w / 2, this.rect.y + this.rect.h / 2 - canvasH / 80, false, 10);
-                    this.onCooldown = true;
-                    this.count++;
-                    if (this.count === this.limit) {
-                        this.l_state = 2;
-                        return;
-                    }
-                    setTimeout(() => {
-                        this.onCooldown = false;
-                    }, this.cooldown)
-                }
+                this.shoot();
                 break;
             case 2:
                 this.rect.x += this.speed;
@@ -329,6 +360,92 @@ class Enemy extends GameObject {
                     this.destroy();
                 }
                 break;
+        }
+    }
+
+    shoot() {
+        if (!this.onCooldown) {
+            new Bullet(this.rect.x + this.rect.w / 2, this.rect.y + this.rect.h / 2 - canvasH / 80, false, 10);
+            this.onCooldown = true;
+            this.count++;
+            if (this.count === this.limit) {
+                this.l_state = 2;
+                return;
+            }
+            setTimeout(() => {
+                this.onCooldown = false;
+            }, this.cooldown)
+        }
+    }
+
+    takeHit() {
+        score += 5;
+        if (this.l_state === 1) {
+            this.l_state++;
+        }
+    }
+
+    destroy() {
+        super.destroy();
+        enemies.delete(this.id);
+    }
+}
+
+class Boss extends Enemy {
+    placing = null;
+    up = false;
+    health = 100;
+
+    constructor() {
+        super(canvasW, canvasH / 2 - canvasH / 4, canvasW / 4, canvasH / 2);
+        this.spr.src = "game/boss.png";
+        this.speed = 5;
+        boss_instance = this;
+    }
+
+    shoot() {
+        if (this.up) {
+            this.rect.y -= this.speed / 2;
+            if (this.rect.y <= 0) {
+                this.up = false;
+            }
+        } else {
+            this.rect.y += this.speed / 2;
+            if (this.rect.y + this.rect.h * 1.5 >= canvasW) {
+                this.up = true;
+            }
+        }
+        if (!this.onCooldown) {
+            if (this.placing === null) {
+                this.placing = []
+                var cnt = random_range(2, 5);
+                for (let i = 0; i < cnt; i++) {
+                    this.placing.push(random_range(0, this.rect.y + this.rect.h));
+                }
+            }
+            this.placing.forEach(y => {
+                new Bullet(canvasW - 30, y, false, 12);
+            });
+            this.onCooldown = true;
+            setTimeout(() => {
+                this.onCooldown = false;
+            }, this.cooldown);
+            this.count++;
+            if (this.count === this.limit) {
+                this.placing = null;
+                this.count = 0;
+            }
+        }
+    }
+
+    takeHit() {
+        if (this.l_state === 1) {
+            this.health -= 5;
+            if (this.health <= 0) {
+                boss_instance = null;
+                score += 50;
+                this.l_state++;
+            }
         }
     }
 }
@@ -340,6 +457,21 @@ function drawScore() {
         context.fillText("Highscore:" + highScore + "            " + "Score:" + score, canvasW * (1 / 2), 20, canvasW / 3);
     } else {
         context.fillText("Highscore:" + highScore, canvasW * (2 / 3), 22, canvasW / 3);
+    }
+}
+
+function healthBar() {
+    context.beginPath();
+    context.rect(10, 10, player.health, 10);
+    context.fillStyle = "#FF0000";
+    context.fill();
+    context.closePath();
+    if (boss_instance != null) {
+        context.beginPath();
+        context.rect(10, 30, boss_instance.health, 10);
+        context.fillStyle = "#005cff";
+        context.fill();
+        context.closePath();
     }
 }
 
