@@ -161,10 +161,7 @@ class Obstacle extends GameObject {
             this.destroy()
         if (!this.destroyed) {
             if (player.checkCollision(this.rect)) {
-                player.health -= 20;
-                if (player.health <= 0) {
-                    proceed();
-                }
+                player.takeHit(20);
                 this.destroy();
             }
         }
@@ -189,7 +186,9 @@ class Player extends GameObject {
             if (!this.invincible) {
                 context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
             } else {
-
+                context.globalAlpha = 0.5;
+                context.drawImage(this.sprite, this.rect.x, this.rect.y, this.rect.w, this.rect.h);
+                context.globalAlpha = 1;
             }
         }
         if (!isTouchControl) {
@@ -232,7 +231,18 @@ class Player extends GameObject {
     }
 
     checkCollision(rect) {
-        return (rect.x - this.rect.x < this.rect.w && rect.x > this.rect.x) && ((rect.y - this.rect.y) < this.rect.h && rect.y > this.rect.y);
+        return !this.invincible && (rect.x - this.rect.x < this.rect.w && rect.x > this.rect.x) && ((rect.y - this.rect.y) < this.rect.h && rect.y > this.rect.y);
+    }
+
+    takeHit(amount) {
+        this.health -= amount;
+        if (this.health <= 0) {
+            proceed();
+        }
+        this.invincible = true;
+        setTimeout(()=>{
+            this.invincible = false;
+        },2000);
     }
 
     update() {
