@@ -77,10 +77,23 @@ class event_manager { // manages random events
                 setTimeout(() => {
                     this.obstacleTimer = false;
                     if (state === 1) {
-                        new Obstacle(canvasW, random_range(canvasW * 0.1, canvasW * 0.9));
+                        new Obstacle(canvasW, random_range(canvasH * 0.1, canvasH * 0.9));
                     }
                     this.check();
                 }, random_range(300, 900));
+            }
+            if (!this.enemyTimer) {
+                this.enemyTimer = true;
+                setTimeout(() => {
+                    this.enemyTimer = false;
+                    if (state === 1) {
+                        var cnt = random_range(1, 5);
+                        for (let i = 0; i < cnt; i++) {
+                            new Enemy(canvasW, random_range(canvasH * 0.1, canvasH * 0.9));
+                        }
+                    }
+                    this.check();
+                }, random_range(2000, 7000));
             }
         }
     }
@@ -115,12 +128,20 @@ class GameObject { // general class for all drawable objects
 class Bullet extends GameObject {
 
     constructor(x, y, type, speed) { //type=true - good bullet, false - bad bullet
-        super(x, y, canvasW / 20, canvasH / 40, "game/bullet.png");
+        super(x, y, canvasW / 20, canvasH / 40, type ? "game/bullet.png" : "game/enemy_bullet.png");
         this.type = type;
         this.speed = speed;
     }
 
     update() {
+        if (!this.type) {
+            if (player.checkCollision(this.rect)) {
+                player.health -= 40;
+                if (player.health <= 0) {
+                    proceed();
+                }
+            }
+        }
         if (outOfBounds(this.rect))
             this.destroy();
         this.rect.x = this.type ? this.rect.x + this.speed : this.rect.x - this.speed;
@@ -141,7 +162,7 @@ class Obstacle extends GameObject {
         if (!this.destroyed) {
             if (player.checkCollision(this.rect)) {
                 player.health -= 20;
-                if (player.health === 0) {
+                if (player.health <= 0) {
                     proceed();
                 }
                 this.destroy();
@@ -259,6 +280,48 @@ class Player extends GameObject {
 /*if( /Android|webOS|iPhone|iPad|Mac|Macintosh|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
     // some code..
 }*/
+class Enemy extends GameObject {
+    speed = 10;
+    limit = 3; //how many bullets will be fired before falling back
+    onCooldown = false;
+    cooldown = 1000;
+    l_state = 0; // 0 - moving to the spot, 1 - firing, 2 - falling back
+
+    constructor(x, y) {
+        super(x, y, 70, 120, 'game/enemy.png');
+        this.count = 0;
+    }
+
+    update() {
+        switch (this.l_state) {
+            case 0:
+                this.rect.x -= this.speed;
+                if (this.rect.x < canvasW * 0.8)
+                    this.l_state = 1;
+                break;
+            case 1:
+                if (!this.onCooldown) {
+                    new Bullet(this.rect.x + this.rect.w / 2, this.rect.y + this.rect.h / 2 - canvasH / 80, false, 10);
+                    this.onCooldown = true;
+                    this.count++;
+                    if (this.count === this.limit) {
+                        this.l_state = 2;
+                        return;
+                    }
+                    setTimeout(() => {
+                        this.onCooldown = false;
+                    }, this.cooldown)
+                }
+                break;
+            case 2:
+                this.rect.x += this.speed;
+                if (outOfBounds(this.rect)) {
+                    this.destroy();
+                }
+                break;
+        }
+    }
+}
 
 function drawScore() {
     context.font = "16px Arial";
