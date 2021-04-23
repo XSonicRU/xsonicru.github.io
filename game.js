@@ -46,6 +46,8 @@ function proceed() { // init func for buttons and game start/finish
             timerHandle = setInterval(() => {
                 score++;
             }, 500);
+            for (let i = 0; i < 40; i++)
+                new Star(true);
             new GameObject(healthBar);
             new GameObject(drawScore);
             break;
@@ -74,7 +76,8 @@ function proceed() { // init func for buttons and game start/finish
 
 function update() { // does the drawing
     context.clearRect(0, 0, canvas.width, canvas.height);
-    objects.forEach(d => d.draw());
+    objects.forEach(d => typeof (d.earlyDraw) == "function" ? d.earlyDraw() : null);
+    objects.forEach(d => typeof (d.draw) == "function" ? d.draw() : null);
     objects.forEach(d => typeof (d.update) == "function" ? d.update() : null);
 }
 
@@ -82,6 +85,7 @@ class event_manager { // manages random events
     bossTimer = false;
     enemyTimer = false;
     bossTurn = false;
+    starTimer = false;
 
     constructor() {
         this.obstacleTimer = false;
@@ -95,9 +99,8 @@ class event_manager { // manages random events
                     this.obstacleTimer = true;
                     setTimeout(() => {
                         this.obstacleTimer = false;
-                        if (state === 1) {
+                        if (state === 1)
                             new Obstacle(canvasW, random_range(canvasH * 0.1, canvasH * 0.9));
-                        }
                         this.check();
                     }, random_range(300, 900));
                 }
@@ -118,11 +121,20 @@ class event_manager { // manages random events
             if (!this.bossTimer) {
                 this.bossTimer = true;
                 setTimeout(() => {
-                    if (state === 1) {
+                    this.bossTimer = false;
+                    if (state === 1)
                         new Boss();
-                    }
                     this.check();
                 }, random_range(5000, 20000)); //5000-20000
+            }
+            if (!this.starTimer) {
+                this.starTimer = true;
+                setTimeout(() => {
+                    this.starTimer = false;
+                    if (state === 1)
+                        new Star(false);
+                    this.check();
+                }, random_range(0, 256));
             }
         }
     }
@@ -256,11 +268,11 @@ class Player extends GameObject {
             document.addEventListener('keydown', keyEvent);
             document.addEventListener('keyup', keyEvent);
         } else {
-            canvas.addEventListener('click', (evt) => {
+            canvas.addEventListener('touchmove', (evt) => {
                 this.x1 = this.rect.x;
                 this.y1 = this.rect.y;
-                this.x2 = evt.offsetX;
-                this.y2 = evt.offsetY;
+                this.x2 = evt.offsetX - this.rect.w / 2;
+                this.y2 = evt.offsetY - this.rect.h / 2;
                 var dx = this.x2 - this.x1;
                 var dy = this.y2 - this.y1;
                 this.dist = Math.abs(Math.sqrt(dx * dx + dy * dy));
@@ -417,7 +429,7 @@ class Boss extends Enemy {
         }
         if (!this.onCooldown) {
             if (this.placing === null) {
-                this.placing = []
+                this.placing = [];
                 var cnt = random_range(2, 5);
                 for (let i = 0; i < cnt; i++) {
                     this.placing.push(random_range(0, this.rect.y + this.rect.h));
@@ -446,6 +458,40 @@ class Boss extends Enemy {
                 score += 50;
                 this.l_state++;
             }
+        }
+    }
+}
+
+class Star extends GameObject {
+    speed = 3;
+
+    constructor(isStart) {
+        let type = Math.round(random_range(0, 3));
+        let size;
+        switch (type) {
+            case 0:
+                size = 0.4;
+                break;
+            case 1:
+                size = 0.6;
+                break;
+            case 2:
+                size = 0.8;
+                break;
+            case 3:
+                size = 1;
+        }
+        super(isStart ? random_range(0, canvasW) : canvasW, random_range(0, canvasH), 20 * size, 20 * size, "game/star.png");
+        this.type = type;
+        this.size = size;
+        this.earlyDraw = this.draw;
+        this.draw = null;
+    }
+
+    update() {
+        this.rect.x -= this.speed * this.size
+        if (outOfBounds(this.rect)) {
+            this.destroy();
         }
     }
 }
