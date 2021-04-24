@@ -268,7 +268,7 @@ class Player extends GameObject {
             document.addEventListener('keydown', keyEvent);
             document.addEventListener('keyup', keyEvent);
         } else {
-            canvas.addEventListener('touchmove', (evt) => {
+            canvas.addEventListener('mousemove', (evt) => {
                 this.x1 = this.rect.x;
                 this.y1 = this.rect.y;
                 this.x2 = evt.offsetX - this.rect.w / 2;
@@ -413,6 +413,7 @@ class Boss extends Enemy {
         this.spr.src = "game/boss.png";
         this.speed = 5;
         boss_instance = this;
+        this.limit = 2;
     }
 
     shoot() {
