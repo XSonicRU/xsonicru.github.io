@@ -528,12 +528,19 @@ class Button extends GameObject {
             context.font = "16px Arial";
             context.strokeStyle = "#FFFFFF";
             context.strokeRect(x * this.multipliers.x, y, w, h);
-            context.fillText(text, x + context.measureText(text.length).width * 2, y + (h * (1.8 / 3)), w * (2 / 3))
+            context.fillText(text, this.multipliers.x*(x + context.measureText(text.length).width * 2), y + (h * (1.8 / 3)), w * (2 / 3))
         });
         this.multipliers = {x: 1, y: 1, w: 1, h: 1}
         const path = new Path2D();
         path.rect(x, y, w, h);
         path.closePath();
+        canvas.addEventListener('mousemove', (evt) =>{
+            if (context.isPointInPath(path, evt.offsetX, evt.offsetY)) {
+                this.multipliers.x = 1.3;
+            }else{
+                this.multipliers.x = 1;
+            }
+        }, false);
         canvas.addEventListener('click', function (evt) {
             if (context.isPointInPath(path, evt.offsetX, evt.offsetY)) {
                 onClick();
